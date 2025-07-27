@@ -106,7 +106,7 @@ for i in range(1, STAR_LIMIT + 1):
                 strategy.set_probability(cur_p)
                 sub_best_strategy = strategy.build()
                 cost_mins[i] = cur_cost
-                Vcard_mins[i] = Vcard_mins[0] + cost_mins[i]
+                Vcard_mins[i] = Vcard_mins[i-1] + cost_mins[i]
     best_strategy[i] += sub_best_strategy
 
 print("最佳策略：")
