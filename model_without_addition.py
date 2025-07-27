@@ -67,9 +67,10 @@ for i in range(1, STAR_LIMIT + 1):
             print(f"当前状态：{i-1}→{i}, 当前组合: {comb}, 当前概率: {cur_p}, 当前成本: {cur_cost}")
             if cur_cost < cost_mins[i]:
                 strategy.set_probability(cur_p)
-                sub_best_strategy = strategy.build()
+                sub_best_strategy = strategy
                 cost_mins[i] = cur_cost
                 Vcard_mins[i] = Vcard_mins[i-1] + cost_mins[i]
+        sub_best_strategy = sub_best_strategy.build()
     else:
         p3 = p_list[3][i]
         p2 = p_list[2][i]
@@ -104,9 +105,10 @@ for i in range(1, STAR_LIMIT + 1):
             print(f"当前状态：{i-1}→{i}, 当前组合: {comb}, 当前概率: {cur_p}, 当前成本: {cur_cost}")
             if cur_cost < cost_mins[i]:
                 strategy.set_probability(cur_p)
-                sub_best_strategy = strategy.build()
+                sub_best_strategy = strategy
                 cost_mins[i] = cur_cost
                 Vcard_mins[i] = Vcard_mins[i-1] + cost_mins[i]
+        sub_best_strategy = sub_best_strategy.build()
     best_strategy[i] += sub_best_strategy
 
 print("最佳策略：")
