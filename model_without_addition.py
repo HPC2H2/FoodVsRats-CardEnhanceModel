@@ -1,7 +1,8 @@
 """
 Author: HPC2H2
 Date: 2025-07-22
-Version: 1.0
+Modified1: 2025-07-28
+Version: 1.1
 Coding: UTF-8
 License: MIT
 Description: 在不考虑四叶草和不考虑失败降级惩罚情况下的美食大战老鼠卡片强化最优决策模型。
