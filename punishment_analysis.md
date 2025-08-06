@@ -1,80 +1,280 @@
-# Card Enhancement Punishment Analysis
+# Food vs Rats Card Enhancement Model Implementation (with Punishment Mechanism)
 
-This document summarizes the findings from the punishment simulation and its impact on the card enhancement model for the "Food vs Rats" game.
+## Model Overview
 
-## Key Metrics Explained
+This model is designed for the card enhancement system in the game "Food vs Rats," considering four-leaf clover bonuses and failure downgrade penalties for optimal decision-making. When the main card is above 6 stars, Monte Carlo simulation is used to determine the punishment values.
 
-Before diving into the analysis, let's clarify the key metrics used in the model:
+## Mathematical Model and Symbol Definitions
 
-1. **成本 (Cost)**: The expected resource expenditure needed to enhance a card from its current star level to the next level. In the punishment model, this is the raw cost of materials used for enhancement, without dividing by the success rate. Instead, the punishment factors are applied to account for the expected number of attempts.
+### Basic Symbol Definitions
 
-2. **价值 (Value)**: The cumulative value of a card at a specific star level. This is calculated as the base value (1 for 0-star) plus the sum of all enhancement costs up to that star level.
+- $p_{i,j}$: Base success rate for enhancing from star level $i$ to star level $j$ using a sub-card
+- $V_{card}(i)$: Cumulative value of a card at star level $i$
+- $C_{min}(i)$: Minimum expected cost to enhance from star level $i-1$ to $i$
+- $CE(i)$: Best cost-effectiveness ratio (success rate/cost) for star level $i$
+- $A_{clover}(k)$: Success rate multiplier provided by four-leaf clover level $k$
+- $A_{VIP}(v)$: Success rate bonus provided by VIP level $v$
+- $A_{guild}(g)$: Success rate bonus provided by guild level $g$
+- $V_{clover}(k)$: Value of four-leaf clover level $k$
+- $PF(i)$: Punishment factor for star level $i$
 
-3. **性价比 (Cost-Effectiveness)**: A ratio calculated as `success_probability / cost`. This metric helps identify the most efficient enhancement strategy by balancing success rate and resource expenditure.
+### Success Rate Calculation
 
-### Benefits of Not Dividing Cost by Probability
+For cases using multiple sub-cards, the success rate is calculated as follows:
+1. The first card's success rate is the base success rate $p_{i,j}$
+2. Each subsequent card increases the base success rate by 1/3, with a maximum total success rate of 1
+3. Apply four-leaf clover, VIP, and guild bonuses:
 
-In traditional enhancement models, the expected cost is calculated as `card_value / success_rate`. However, in our punishment model, we don't divide the cost by the probability. Instead, we:
+$$p_{final} = \min(p_{base} \times A_{clover}(k) \times (1 + A_{VIP}(v) + A_{guild}(g)), 1)$$
 
-1. Calculate the raw cost of materials used for enhancement
-2. Apply punishment factors to account for the expected number of attempts
-3. Use cost-effectiveness (success_probability / cost) as the selection criterion
+Where:
+- $p_{base}$ is the base success rate (after considering multiple sub-cards)
+- $A_{clover}(k)$ is the multiplier from four-leaf clover level $k$
+- $A_{VIP}(v)$ is the bonus from VIP level $v$
+- $A_{guild}(g)$ is the bonus from guild level $g$
 
-This approach has several advantages:
+### Expected Cost Calculation (Without Punishment)
 
-- **More accurate representation of real costs**: The punishment factors already account for the expected number of attempts, including failures and downgrades
-- **Better handling of edge cases**: When success rates approach 1.0, traditional models can underestimate costs
-- **Clearer separation of concerns**: The raw cost represents the actual materials used, while the punishment factors represent the penalty for failures
+The traditional expected cost calculation formula is:
 
-The model uses cost-effectiveness as the primary selection criterion rather than just minimum cost. This approach ensures that we're not just finding the cheapest strategy, but the one that gives the best return on investment in terms of success probability per unit of cost.
+$$C_{expected} = \frac{C_{materials}}{p_{success}}$$
 
-## Punishment Factors
+Where:
+- $C_{materials}$ is the material cost (sub-card value + four-leaf clover value)
+- $p_{success}$ is the success rate
 
-The punishment simulation revealed some interesting and counterintuitive results. The punishment factors for high-star enhancements (7-star and above) are significantly less than 1.0:
+### Expected Cost Calculation (With Punishment Factor)
 
-| Star Level | Punishment Factor | Reduction in Expected Cost |
-|------------|-------------------|----------------------------|
-| 1-6        | 1.0000            | 0%                         |
-| 7          | 0.5967            | 40%                        |
-| 8          | 0.4469            | 55%                        |
-| 9          | 0.3643            | 64%                        |
-| 10         | 0.2311            | 77%                        |
-| 11         | 0.2182            | 78%                        |
-| 12         | 0.2058            | 79%                        |
-| 13         | 0.1927            | 81%                        |
-| 14         | 0.1816            | 82%                        |
-| 15         | 0.1717            | 83%                        |
-| 16         | 0.1609            | 84%                        |
+When considering failure downgrade penalties, we introduce a punishment factor:
 
-## Interpretation
+$$C_{expected} = \frac{C_{materials}}{p_{success}} \times PF(i)$$
 
-The punishment factors being less than 1.0 means that the simulated costs with punishment are actually lower than the theoretical costs without punishment. This is counterintuitive because we would expect punishment (card downgrade on failure) to increase costs.
+Where $PF(i)$ is the punishment factor determined through Monte Carlo simulation, reflecting the impact of failure downgrades on total cost.
 
-This can be explained by the following:
+### Cost-Effectiveness Calculation
 
-1. **Theoretical Cost Calculation**: The traditional theoretical cost calculation (card value / success rate) assumes that each attempt is independent and starts from the same state.
+Cost-effectiveness is defined as the ratio of success rate to expected cost:
 
-2. **Downgrade Dynamics**: In the punishment model, when a card is downgraded after a failed attempt, subsequent attempts are made from a lower star level. This creates a complex dynamic where:
-   - The cost of each attempt decreases (lower star cards are used)
-   - The success probability remains the same
-   - Multiple attempts may be needed to reach the target
+$$CE = \frac{p_{success}}{C_{expected}}$$
 
-3. **Average Attempts**: The simulation shows that the average number of attempts increases with star level, but not as dramatically as the theoretical model would predict.
+This metric considers both success rate and cost simultaneously, used for selecting the optimal strategy.
 
-## Impact on Enhancement Strategy
+## Monte Carlo Simulation Principles
 
-The punishment model significantly changes the optimal enhancement strategies:
+### Why Monte Carlo Simulation is Needed
 
-1. **Higher Star Levels**: For high-star enhancements (7-16), the expected cost is much lower than previously calculated, making these enhancements more economically viable.
+In traditional expected cost calculations, we assume each enhancement attempt is independent, and failure doesn't affect subsequent attempts. However, in the game, when the main card's star level is ≥6, failure causes the card to downgrade, making traditional expected cost calculation methods inaccurate.
 
-2. **Four-Leaf Clover Usage**: The model now recommends using higher-level four-leaf clovers for high-star enhancements to maximize success probability.
+Monte Carlo simulation approximates the actual expected cost through numerous random experiments, considering the impact of failure downgrades.
 
-3. **Card Combinations**: The model consistently recommends using three cards of the same star level for high-star enhancements, rather than mixing different star levels.
+### Monte Carlo Simulation Process
 
-4. **Cost-Effectiveness vs. Minimum Cost**: While a minimum cost approach would simply look for the cheapest way to enhance a card, our cost-effectiveness approach finds strategies that balance cost with success probability. This is particularly important for high-star enhancements where the risk of failure and downgrade is significant.
+1. For each star level $i$ (starting from 6):
+   a. Simulate a large number (e.g., 10,000) of enhancement attempts
+   b. For each simulation:
+      - Start from the initial star level
+      - Repeatedly attempt enhancement until successfully reaching the target star level
+      - Record the number of attempts and material costs required
+   c. Calculate the average number of attempts and average material cost
+   d. Calculate the punishment factor: $PF(i) = \frac{actual\ expected\ cost}{theoretical\ expected\ cost}$
 
-## Conclusion
+### Significance of the Punishment Factor
 
-The punishment simulation has revealed that the downgrade penalty system in "Food vs Rats" actually makes high-star enhancements more cost-effective than previously thought. This is because the theoretical model overestimates the true cost when not considering the complex dynamics of the downgrade system.
+The punishment factor $PF(i)$ represents the ratio of actual expected cost to theoretical expected cost. Typically $PF(i) < 1$, because:
 
-The updated model with punishment factors provides more accurate cost estimates and optimal strategies for card enhancement, especially for high-star levels. By using cost-effectiveness as our optimization criterion, we ensure that players get the best possible return on their investment of resources when enhancing cards.
+1. After a failure downgrade, we need to restart enhancement from a lower star level
+2. The enhancement cost for lower star levels is usually lower than the current star level
+3. The success rate for lower star levels is usually higher than the current star level
+
+This "downgrade and re-enhance" mechanism actually reduces the overall expected cost, so the punishment factor is usually less than 1.
+
+## Detailed Algorithm Flow
+
+### 1. Initialization
+
+```python
+# Load punishment factors
+punishment_factors = load_punishment_factors()
+
+# Store cumulative value of cards at each star level
+Vcard_mins = [1e9] * (STAR_LIMIT + 1)
+# Store enhancement cost for each star level
+cost_mins = [float('inf')] * (STAR_LIMIT + 1)
+# Store best cost-effectiveness for each star level
+best_cost_effectiveness = [0] * (STAR_LIMIT + 1)
+Vcard_mins[0] = 1
+best_strategy = [""] * (STAR_LIMIT + 1)
+```
+
+### 2. Calculate Optimal Strategy for Each Star Level
+
+#### For 1-Star Cards
+
+```python
+p3 = p_list[3][i]  # Base success rate for same-star sub-card
+cost_mins[i] = Vcard_mins[0] / p3  # Expected cost
+Vcard_mins[i] = Vcard_mins[0] + cost_mins[i]  # Cumulative value
+```
+
+#### For 2-Star Cards
+
+Consider combinations of same-star and 1-star-lower sub-cards:
+
+```python
+for comb in combinations_2:  # Iterate through all possible sub-card combinations
+    cur_cost = 0  # Current combination's material cost
+    cur_p = 0  # Current combination's success rate
+    
+    # Calculate base success rate and material cost
+    for j in range(0, len(comb)):
+        if comb[j] == 'same':  # Same-star sub-card
+            if j == 0:  # First card
+                cur_p = p3
+            else:
+                cur_p = min(cur_p + p3/3, 1)  # Subsequent cards add 1/3 of base success rate
+            cur_cost += Vcard_mins[i-1]  # Add same-star sub-card value
+        elif comb[j] == 'down1':  # 1-star-lower sub-card
+            if j == 0:
+                cur_p = p2
+            else:
+                cur_p = min(cur_p + p2/3, 1)
+            cur_cost += Vcard_mins[i-2]  # Add 1-star-lower sub-card value
+    
+    # Save cost and success rate without four-leaf clover
+    without_addition_cost = cur_cost
+    without_addition_p = cur_p
+    
+    # Calculate success rate and expected cost with four-leaf clover bonuses
+    for k in range(0, len(clover_levels)):
+        # Calculate success rate with bonuses
+        cur_p = without_addition_p*clover_additions[k]*(1 + guild_additions[cur_guild] + VIP_additions[cur_vip])
+        if cur_p > 1:
+            cur_p = 1
+        
+        # Calculate total material cost (sub-cards + four-leaf clover)
+        cur_cost = without_addition_cost + Vclovers[k]
+        
+        # Calculate expected cost, considering punishment factor
+        expected_cost = calculate_expected_cost(
+            current_star=i-1,
+            target_star=i,
+            success_rate=cur_p,
+            card_value=cur_cost,
+            punishment_factors=punishment_factors
+        )
+        
+        # Calculate cost-effectiveness
+        cost_effectiveness = cur_p / expected_cost if expected_cost > 0 else 0
+        
+        # Update optimal strategy
+        if cost_effectiveness > best_cost_effectiveness[i]:
+            best_cost_effectiveness[i] = cost_effectiveness
+            cost_mins[i] = expected_cost
+            Vcard_mins[i] = Vcard_mins[i-1] + cost_mins[i]
+            # Update strategy information...
+```
+
+#### For 3-Star and Above Cards
+
+Consider combinations of same-star, 1-star-lower, and 2-star-lower sub-cards, with logic similar to 2-star cards but adding consideration for 2-star-lower sub-cards.
+
+### 3. Calculate Expected Cost (Considering Punishment Factor)
+
+```python
+def calculate_expected_cost(current_star, target_star, success_rate, card_value, punishment_factors):
+    """Calculate the expected cost to enhance from current_star to target_star, considering punishment factors"""
+    if current_star >= target_star:
+        return 0
+    
+    if success_rate <= 0:
+        return float('inf')
+    
+    # Theoretical cost = card value / success rate
+    theoretical_cost = card_value / success_rate
+    
+    # If star level >= 7, apply punishment factor
+    if target_star >= 7:
+        return theoretical_cost * punishment_factors[target_star]
+    else:
+        return theoretical_cost
+```
+
+## Monte Carlo Simulation Implementation
+
+### Simulating a Single Enhancement Process
+
+```python
+def simulate_single_enhancement(start_star, target_star, success_rates, downgrade_levels):
+    """Simulate a single enhancement process from start_star to target_star"""
+    current_star = start_star
+    attempts = 0
+    material_cost = 0
+    
+    while current_star < target_star:
+        attempts += 1
+        # Cost of each attempt is the value of the current star level card
+        attempt_cost = base_card_values[current_star]
+        material_cost += attempt_cost
+        
+        # Check if enhancement is successful
+        if random.random() < success_rates[current_star+1]:
+            # Success, star level +1
+            current_star += 1
+        else:
+            # Failure - if star level >= 6, downgrade
+            if current_star >= 6 and current_star in downgrade_levels:
+                current_star -= downgrade_levels[current_star]
+        
+        # Add material cost (simplified as 1 here, should be card value in reality)
+        material_cost += 1
+    
+    return attempts, material_cost
+```
+
+### Batch Simulation and Punishment Factor Calculation
+
+```python
+def calculate_punishment_factors(success_rates, downgrade_levels, num_simulations=10000):
+    """Calculate punishment factors through Monte Carlo simulation"""
+    punishment_factors = {}
+    
+    for target_star in range(7, STAR_LIMIT + 1):
+        start_star = target_star - 1
+        
+        # Theoretical number of attempts = 1/success rate
+        theoretical_attempts = 1 / success_rates[start_star]
+        
+        # Simulate multiple enhancement processes
+        total_attempts = 0
+        total_material_cost = 0
+        
+        for _ in range(num_simulations):
+            attempts, material_cost = simulate_single_enhancement(
+                start_star, target_star, success_rates, downgrade_levels
+            )
+            total_attempts += attempts
+            total_material_cost += material_cost
+        
+        # Calculate average number of attempts and material cost
+        avg_attempts = total_attempts / num_simulations
+        avg_material_cost = total_material_cost / num_simulations
+        
+        # Calculate punishment factor = actual expected cost / theoretical expected cost
+        punishment_factor = avg_material_cost / theoretical_attempts
+        punishment_factors[target_star] = punishment_factor
+    
+    return punishment_factors
+```
+
+## Conclusion and Application
+
+By introducing punishment factors, our model can more accurately reflect the actual cost of card enhancement in the game, especially considering the impact of failure downgrades. This method combines theoretical calculation and Monte Carlo simulation to provide players with optimal enhancement strategy decisions.
+
+The main applications of the model include:
+
+1. Providing optimal enhancement strategies for players of different VIP and guild levels
+2. Calculating the actual value and enhancement cost of cards at each star level
+3. Evaluating the cost-effectiveness of different enhancement schemes
+4. Helping players make optimal decisions when resources are limited
+
+Through this mathematical model, players can maximize resource utilization efficiency, reduce waste in the enhancement process, and upgrade card star levels more quickly.
